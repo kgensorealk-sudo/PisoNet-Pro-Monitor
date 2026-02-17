@@ -1,0 +1,7 @@
+{
+  "name": "Copy of PisoNet Pro Monitor",
+  "description": "A streamlined real-time monitoring system for PisoNet terminals, focusing on PC status, usage tracking, and remote management.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
