@@ -75,7 +75,7 @@ const App: React.FC = () => {
       .select('*')
       .eq('terminal_id', terminalId)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(30);
     
     if (data && !error) {
       setPcLogs(data);
@@ -99,7 +99,7 @@ const App: React.FC = () => {
           },
           (payload) => {
             const newLog = payload.new as PCLog;
-            setPcLogs(prev => [newLog, ...prev.slice(0, 19)]);
+            setPcLogs(prev => [newLog, ...prev.slice(0, 29)]);
           }
         )
         .subscribe();
@@ -117,7 +117,8 @@ const App: React.FC = () => {
     const checkStaleNodes = setInterval(() => {
       const now = Date.now();
       setPcs(currentPcs => currentPcs.map(pc => {
-        const isStale = (now - pc.lastHeartbeat) > 25000;
+        // Threshold remains at 60s for stability, but we track it more reliably
+        const isStale = (now - pc.lastHeartbeat) > 60000;
         if (isStale && pc.status !== PCStatus.OFFLINE) {
           return { ...pc, status: PCStatus.OFFLINE };
         }
@@ -299,7 +300,7 @@ const App: React.FC = () => {
               <div className="p-8 border-b border-white/5 bg-slate-900/50">
                 <h3 className="text-xs font-black text-indigo-400 uppercase tracking-[0.2em] flex items-center gap-2">
                   <span className="w-2 h-2 bg-indigo-500 rounded-full animate-ping"></span>
-                  Live Logs
+                  Activity History
                 </h3>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
@@ -336,7 +337,7 @@ const App: React.FC = () => {
                   </div>
                   <div>
                     <h2 className="text-2xl font-black text-white leading-none mb-1">{previewPC.name}</h2>
-                    <p className="text-indigo-400 font-mono text-[10px] tracking-widest">{previewPC.ipAddress} • {previewPC.status === PCStatus.OFFLINE ? 'OFFLINE' : 'LIVE MONITORING'}</p>
+                    <p className="text-indigo-400 font-mono text-[10px] tracking-widest">{previewPC.ipAddress} • {previewPC.status === PCStatus.OFFLINE ? 'OFFLINE (Viewing History)' : 'LIVE MONITORING'}</p>
                   </div>
                 </div>
                 <button onClick={() => setPreviewPC(null)} className="bg-white/10 hover:bg-rose-500/20 hover:text-rose-400 p-3 rounded-full text-white transition-all backdrop-blur-xl">
@@ -350,7 +351,7 @@ const App: React.FC = () => {
                 ) : (
                   <div className="flex flex-col items-center gap-4 text-slate-800">
                     <svg className="animate-pulse" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.5"><path d="M2 3h20v14H2z"></path><path d="M8 21h8"></path><path d="M12 17v4"></path></svg>
-                    <span className="text-[10px] uppercase font-black tracking-[0.4em]">No Live Stream</span>
+                    <span className="text-[10px] uppercase font-black tracking-[0.4em]">{previewPC.status === PCStatus.OFFLINE ? 'Terminal Disconnected' : 'No Signal'}</span>
                   </div>
                 )}
               </div>
@@ -359,14 +360,14 @@ const App: React.FC = () => {
                 <div className="flex gap-12">
                    <div className="text-center">
                      <p className="text-[10px] text-slate-500 font-black uppercase mb-1">CPU Load</p>
-                     <p className="text-xl font-black text-white">{previewPC.metrics.cpu.toFixed(0)}%</p>
+                     <p className="text-xl font-black text-white">{previewPC.status === PCStatus.OFFLINE ? '—' : `${previewPC.metrics.cpu.toFixed(0)}%`}</p>
                    </div>
                    <div className="text-center">
                      <p className="text-[10px] text-slate-500 font-black uppercase mb-1">RAM usage</p>
-                     <p className="text-xl font-black text-white">{previewPC.metrics.ram.toFixed(0)}%</p>
+                     <p className="text-xl font-black text-white">{previewPC.status === PCStatus.OFFLINE ? '—' : `${previewPC.metrics.ram.toFixed(0)}%`}</p>
                    </div>
                    <div className="text-center">
-                     <p className="text-[10px] text-slate-500 font-black uppercase mb-1">Active Uptime</p>
+                     <p className="text-[10px] text-slate-500 font-black uppercase mb-1">Last Active Uptime</p>
                      <p className="text-xl font-black text-indigo-400 font-mono">
                        {Math.floor((previewPC.metrics.uptime || 0) / 60)}m
                      </p>
@@ -376,7 +377,8 @@ const App: React.FC = () => {
                 <div className="flex gap-4">
                    <button 
                     onClick={() => handleRefreshScreen(previewPC.id)}
-                    className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-black uppercase text-white transition-all shadow-lg shadow-indigo-600/30 active:scale-95"
+                    disabled={previewPC.status === PCStatus.OFFLINE}
+                    className={`px-8 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-xs font-black uppercase text-white transition-all shadow-lg shadow-indigo-600/30 active:scale-95 ${previewPC.status === PCStatus.OFFLINE ? 'opacity-30 cursor-not-allowed' : ''}`}
                    >
                      Force Snapshot
                    </button>
