@@ -67,12 +67,11 @@ const PCStatusCard: React.FC<PCStatusCardProps> = ({ pc, isAdmin, onRemote, onVi
   };
 
   return (
-    <div 
-      className={`relative group bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-3xl overflow-hidden transition-all duration-500 hover:border-indigo-500/50 hover:bg-slate-900/80 ${isDead ? 'opacity-80 grayscale-[0.3]' : ''}`}
-    >
+    <div className={`relative group bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-3xl overflow-hidden transition-all duration-500 hover:border-indigo-500/50 hover:bg-slate-900/80 ${isDead ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+      
       <div 
         className="relative aspect-video bg-slate-950 overflow-hidden cursor-pointer group/screen"
-        onClick={() => onViewScreen?.(pc)}
+        onClick={() => !isDead && onViewScreen?.(pc)}
       >
         {pc.screenshotUrl ? (
           <img 
@@ -83,7 +82,7 @@ const PCStatusCard: React.FC<PCStatusCardProps> = ({ pc, isAdmin, onRemote, onVi
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/50">
             <svg xmlns="http://www.w3.org/2000/svg" className="text-slate-700 mb-2" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-            <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest">{isDead ? 'Terminal Offline' : 'No Signal'}</p>
+            <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest">No Signal</p>
           </div>
         )}
         
@@ -120,13 +119,6 @@ const PCStatusCard: React.FC<PCStatusCardProps> = ({ pc, isAdmin, onRemote, onVi
                </button>
             )}
           </>
-        )}
-        
-        {isDead && (
-          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="mb-3 opacity-50"><path d="M12 20v-6M9 20v-10M15 20v-2M18 20v-16M6 20v-4"/></svg>
-            <span className="px-6 py-2.5 bg-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-xl shadow-indigo-600/40">View Activity History</span>
-          </div>
         )}
       </div>
 
@@ -170,34 +162,41 @@ const PCStatusCard: React.FC<PCStatusCardProps> = ({ pc, isAdmin, onRemote, onVi
         <div className="grid grid-cols-3 gap-2 mb-4">
           <div className="bg-slate-950/50 p-1.5 rounded-lg border border-white/5 text-center">
             <p className="text-[7px] text-slate-500 uppercase font-bold">CPU</p>
-            <p className="text-[10px] font-bold text-slate-300">{isDead ? '—' : `${pc.metrics.cpu.toFixed(0)}%`}</p>
+            <p className="text-[10px] font-bold text-slate-300">{pc.metrics.cpu.toFixed(0)}%</p>
           </div>
           <div className="bg-slate-950/50 p-1.5 rounded-lg border border-white/5 text-center">
             <p className="text-[7px] text-slate-500 uppercase font-bold">RAM</p>
-            <p className="text-[10px] font-bold text-slate-300">{isDead ? '—' : `${pc.metrics.ram.toFixed(0)}%`}</p>
+            <p className="text-[10px] font-bold text-slate-300">{pc.metrics.ram.toFixed(0)}%</p>
           </div>
           <div className="bg-slate-950/50 p-1.5 rounded-lg border border-white/5 text-center">
-            <p className="text-[7px] text-slate-500 uppercase font-bold">Status</p>
-            <p className={`text-[10px] font-bold ${isDead ? 'text-rose-400' : 'text-emerald-400'}`}>
-              {isDead ? 'OFF' : 'LIVE'}
-            </p>
+            <p className="text-[7px] text-slate-500 uppercase font-bold">Ping</p>
+            <p className="text-[10px] font-bold text-emerald-400">Stable</p>
           </div>
         </div>
 
         <div className="flex justify-between items-center pt-2 border-t border-white/5">
           <div>
-            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Session Time</p>
-            <span className={`text-sm font-black font-mono tracking-tighter ${isDead ? 'text-slate-600' : 'text-indigo-400'}`}>
+            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Active Time (Uptime)</p>
+            <span className={`text-sm font-black font-mono tracking-tighter text-indigo-400`}>
               {formatTime(pc.metrics.uptime || 0)}
             </span>
           </div>
           
-          <button 
-            onClick={() => onViewScreen?.(pc)}
-            className="px-4 py-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
-          >
-            History
-          </button>
+          {isAdmin && (
+            <div className="flex gap-1.5">
+              <button 
+                onClick={handleRefresh}
+                disabled={isRefreshing || isDead}
+                className={`group/btn flex items-center gap-2 bg-indigo-600/10 hover:bg-indigo-600 border border-indigo-500/20 text-indigo-400 hover:text-white text-[8px] font-black uppercase px-3 py-2 rounded-lg transition-all ${isRefreshing ? 'opacity-50' : ''}`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`${isRefreshing ? 'animate-spin' : 'group-hover/btn:scale-110'}`}>
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                Snap
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
