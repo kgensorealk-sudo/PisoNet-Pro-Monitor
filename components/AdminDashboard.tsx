@@ -143,7 +143,7 @@ git push -u origin main`}
                     </div>
                     <div className="space-y-3">
                       <p className="text-sm text-white font-bold">2. Add User</p>
-                      <p className="text-xs text-slate-400">Click on **Authentication** (sidebar) -> **Users** -> **Add User** -> **Create New User**.</p>
+                      <p className="text-xs text-slate-400">Click on **Authentication** (sidebar) {"->"} **Users** {"->"} **Add User** {"->"} **Create New User**.</p>
                     </div>
                     <div className="space-y-3">
                       <p className="text-sm text-white font-bold">3. Enter Credentials</p>
