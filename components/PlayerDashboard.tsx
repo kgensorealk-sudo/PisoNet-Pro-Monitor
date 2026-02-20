@@ -31,12 +31,24 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ currentPC }) => {
           <p className="text-indigo-400 font-mono text-xs font-bold tracking-widest mb-10">{currentPC.ipAddress}</p>
           
           <div className="w-full bg-slate-950/50 p-8 rounded-3xl border border-white/5 mb-8">
-            <div className="flex flex-col items-center justify-center space-y-2">
-              <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Active Session Time</p>
-              <div className={`text-4xl font-black font-mono tracking-tighter ${isActive ? 'text-emerald-400' : 'text-slate-600'}`}>
-                {formatTime(currentPC.metrics.uptime || 0)}
+            <div className="flex flex-col items-center justify-center space-y-4">
+              <div className="text-center">
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Active Session</p>
+                <div className={`text-4xl font-black font-mono tracking-tighter ${isActive ? 'text-emerald-400' : 'text-slate-600'}`}>
+                  {formatTime(currentPC.metrics.uptime || 0)}
+                </div>
               </div>
-              <div className="flex items-center gap-2 mt-4">
+              
+              <div className="w-full h-px bg-white/5"></div>
+              
+              <div className="text-center">
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Total Daily Uptime</p>
+                <div className="text-2xl font-black font-mono tracking-tighter text-indigo-400">
+                  {formatTime(currentPC.dailyUptime + (currentPC.metrics.uptime || 0))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-2">
                 <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-700'}`}></span>
                 <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-emerald-500' : 'text-slate-600'}`}>
                   {isActive ? 'Live & Tracking' : 'PC Suspended'}
@@ -65,9 +77,9 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ currentPC }) => {
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-2">Network Latency</p>
                 <div className="flex items-center gap-3">
                   <div className="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-500" style={{ width: `${Math.min(currentPC.metrics.ping, 100)}%` }}></div>
+                    <div className="h-full bg-emerald-500" style={{ width: `${Math.min(currentPC.metrics?.ping ?? 0, 100)}%` }}></div>
                   </div>
-                  <span className="text-emerald-400 font-mono text-xs font-bold">{currentPC.metrics.ping.toFixed(0)}ms</span>
+                  <span className="text-emerald-400 font-mono text-xs font-bold">{(currentPC.metrics?.ping ?? 0).toFixed(0)}ms</span>
                 </div>
               </div>
               <div className="bg-slate-950 p-4 rounded-2xl border border-white/5">
@@ -75,11 +87,11 @@ const PlayerDashboard: React.FC<PlayerDashboardProps> = ({ currentPC }) => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-[9px] text-slate-600 font-bold uppercase">CPU Usage</p>
-                    <p className="text-white font-mono text-sm">{currentPC.metrics.cpu.toFixed(0)}%</p>
+                    <p className="text-white font-mono text-sm">{(currentPC.metrics?.cpu ?? 0).toFixed(0)}%</p>
                   </div>
                   <div>
                     <p className="text-[9px] text-slate-600 font-bold uppercase">RAM Usage</p>
-                    <p className="text-white font-mono text-sm">{currentPC.metrics.ram.toFixed(0)}%</p>
+                    <p className="text-white font-mono text-sm">{(currentPC.metrics?.ram ?? 0).toFixed(0)}%</p>
                   </div>
                 </div>
               </div>

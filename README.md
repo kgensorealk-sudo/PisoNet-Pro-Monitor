@@ -1,24 +1,20 @@
-# PisoNet Pro Monitor
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-A professional real-time monitoring system for PisoNet terminals using React, Supabase, and Python.
+# Run and deploy your AI Studio app
 
-## 🚀 Deployment Guide
+This contains everything you need to run your app locally.
 
-### 1. Frontend (Web Dashboard)
-This dashboard is designed to be hosted on **Vercel**. 
-- Connect your GitHub repository to Vercel.
-- The build settings are automatic.
+View your app in AI Studio: https://ai.studio/apps/edb72def-8718-49b3-9bce-1fd077d4976f
 
-### 2. Backend (Supabase)
-Ensure you have run the SQL setup script provided in the Admin Dashboard to create the `terminals` and `terminal_logs` tables.
+## Run Locally
 
-### 3. Agent (Python)
-Run `pisonet_agent.py` on each terminal.
-- Requires: `pip install pynput pyautogui Pillow psutil supabase`
-- For stealth mode, rename to `.pyw`.
+**Prerequisites:**  Node.js
 
-## 🛠 Features
-- Real-time Status (Online/Idle/Offline)
-- Live Screen Snapshots
-- Hardware Metrics (CPU/RAM)
-- Event Logging (History)
+
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`

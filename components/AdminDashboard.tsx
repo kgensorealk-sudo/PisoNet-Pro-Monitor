@@ -7,12 +7,25 @@ interface AdminDashboardProps {
   onRemoteAction: (id: number, action: 'reboot' | 'shutdown' | 'maintenance') => void;
   onViewScreen?: (pc: PCInfo) => void;
   onRefreshScreen?: (id: number) => void;
-  onRename?: (id: number, newName: string) => void;
+  onAddTerminal?: () => void;
+  onDeleteTerminal?: (id: number) => void;
+  onUpdateName?: (id: number, newName: string) => void;
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ pcs, onRemoteAction, onViewScreen, onRefreshScreen, onRename }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
+  pcs, 
+  onRemoteAction, 
+  onViewScreen, 
+  onRefreshScreen, 
+  onAddTerminal,
+  onDeleteTerminal,
+  onUpdateName,
+  searchQuery,
+  setSearchQuery
+}) => {
   const [showSetup, setShowSetup] = useState(false);
-  const [setupTab, setSetupTab] = useState<'sql' | 'deploy' | 'security'>('sql');
   const totalActive = pcs.filter(p => p.status === PCStatus.ONLINE).length;
 
   return (
@@ -30,10 +43,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ pcs, onRemoteAction, on
         
         <div className="flex flex-wrap gap-4 items-center">
           <button 
+            onClick={onAddTerminal}
+            className="px-5 py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-2xl text-xs font-black uppercase tracking-widest transition-all text-emerald-400 flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Add Terminal
+          </button>
+          <button 
             onClick={() => setShowSetup(true)}
             className="px-5 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 rounded-2xl text-xs font-black uppercase tracking-widest transition-all text-indigo-400"
           >
-            System & Security
+            Setup Guide
           </button>
           <div className="h-10 w-px bg-white/10 hidden md:block"></div>
           <div className="bg-slate-900/40 border border-white/5 px-6 py-4 rounded-3xl flex items-center gap-4 transition-all hover:bg-slate-900/60">
@@ -49,14 +69,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ pcs, onRemoteAction, on
       </header>
 
       <section className="bg-slate-900/30 border border-white/5 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden">
-        <h2 className="text-xl font-black text-white flex items-center gap-3 mb-8">
-          <span className="w-3 h-3 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.8)]"></span>
-          Terminal Cluster ({pcs.length} Nodes)
-        </h2>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <h2 className="text-xl font-black text-white flex items-center gap-3">
+            <span className="w-3 h-3 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.8)]"></span>
+            Terminal Cluster ({pcs.length} Nodes)
+          </h2>
+          
+          <div className="relative group">
+            <input 
+              type="text" 
+              placeholder="Search by name or IP..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-slate-950/50 border border-white/10 rounded-xl px-10 py-2.5 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 transition-all w-full md:w-64"
+            />
+            <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-600" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </div>
+        </div>
         
         {pcs.length === 0 ? (
           <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-[2rem]">
-            <p className="text-slate-500 font-bold uppercase tracking-widest">Waiting for nodes to connect...</p>
+            <p className="text-slate-500 font-bold uppercase tracking-widest">
+              {searchQuery ? 'No terminals match your search' : 'Waiting for nodes to connect...'}
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -68,105 +103,62 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ pcs, onRemoteAction, on
                 onRemote={onRemoteAction}
                 onViewScreen={onViewScreen}
                 onRefreshScreen={onRefreshScreen}
-                onRename={onRename}
+                onDelete={onDeleteTerminal}
+                onUpdateName={onUpdateName}
               />
             ))}
           </div>
         )}
       </section>
 
+      {/* Setup Modal */}
       {showSetup && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
           <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl" onClick={() => setShowSetup(false)}></div>
-          <div className="relative w-full max-w-3xl bg-slate-900 border border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+          <div className="relative w-full max-w-2xl bg-slate-900 border border-white/10 rounded-[2.5rem] p-10 overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <h2 className="text-2xl font-black text-white mb-6">Database Fix & Setup</h2>
             
-            <div className="flex border-b border-white/5 bg-slate-950/40 p-2">
-              <button 
-                onClick={() => setSetupTab('sql')}
-                className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all rounded-2xl ${setupTab === 'sql' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                1. Database
-              </button>
-              <button 
-                onClick={() => setSetupTab('deploy')}
-                className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all rounded-2xl ${setupTab === 'deploy' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                2. Hosting
-              </button>
-              <button 
-                onClick={() => setSetupTab('security')}
-                className={`flex-1 py-4 text-xs font-black uppercase tracking-widest transition-all rounded-2xl ${setupTab === 'security' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                3. Security
-              </button>
-            </div>
+            <div className="space-y-6">
+              <div className="p-5 bg-rose-500/10 rounded-2xl border border-rose-500/30">
+                <p className="text-[10px] text-rose-400 font-black uppercase mb-3">Critical: Fix "Missing Table" Error</p>
+                <p className="text-xs text-slate-300 mb-4">Copy this code and run it in your **Supabase SQL Editor**:</p>
+                <code className="text-[10px] font-mono text-emerald-400 block bg-black/60 p-4 rounded-xl leading-relaxed whitespace-pre overflow-x-auto">
+{`ALTER TABLE public.terminals ADD COLUMN IF NOT EXISTS daily_uptime bigint DEFAULT 0;
 
-            <div className="p-10 overflow-y-auto custom-scrollbar flex-1">
-              {setupTab === 'sql' && (
-                <div className="space-y-6 animate-fadeIn">
-                  <div className="p-5 bg-rose-500/10 rounded-2xl border border-rose-500/30">
-                    <p className="text-[10px] text-rose-400 font-black uppercase mb-3">SQL Setup Script</p>
-                    <code className="text-[10px] font-mono text-emerald-400 block bg-black/60 p-4 rounded-xl leading-relaxed whitespace-pre overflow-x-auto">
-{`CREATE TABLE public.terminal_logs (
+CREATE TABLE IF NOT EXISTS public.terminal_logs (
   id bigint primary key generated always as identity,
   terminal_id bigint references public.terminals(id),
   event text not null,
   created_at timestamptz default now()
 );
 
+-- Enable realtime for logs
 ALTER PUBLICATION supabase_realtime ADD TABLE terminal_logs;`}
-                    </code>
-                  </div>
-                </div>
-              )}
+                </code>
+              </div>
 
-              {setupTab === 'deploy' && (
-                <div className="space-y-6 animate-fadeIn">
-                  <h3 className="text-xl font-black text-white">Vercel Deployment</h3>
-                  <code className="text-[10px] font-mono text-indigo-400 block bg-black/60 p-4 rounded-xl leading-relaxed whitespace-pre overflow-x-auto">
-{`git init
-git add .
-git commit -m "Initial commit"
-git remote add origin YOUR_GITHUB_URL
-git push -u origin main`}
-                  </code>
-                </div>
-              )}
+              <div className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20">
+                <p className="text-[10px] text-indigo-400 font-black uppercase mb-1">Step 2: Configure & Run Agent</p>
+                <p className="text-xs text-slate-300 mb-3">1. Download `pisonet_agent.py` to the target PC.</p>
+                <p className="text-xs text-slate-300 mb-3">2. Open the file and change <code className="text-emerald-400 font-bold">TERMINAL_ID</code> to match the ID shown on the dashboard card.</p>
+                <p className="text-xs text-slate-300">3. Run: <code className="text-indigo-400 font-mono">python pisonet_agent.py</code></p>
+              </div>
 
-              {setupTab === 'security' && (
-                <div className="space-y-8 animate-fadeIn">
-                  <h3 className="text-xl font-black text-white">Create Admin Account</h3>
-                  <div className="p-6 bg-slate-950 rounded-2xl border border-white/5 space-y-6">
-                    <div className="space-y-3">
-                      <p className="text-sm text-white font-bold">1. Open Supabase Dashboard</p>
-                      <p className="text-xs text-slate-400">Go to your project at <a href="https://supabase.com/dashboard" target="_blank" className="text-indigo-400 underline">supabase.com</a>.</p>
-                    </div>
-                    <div className="space-y-3">
-                      <p className="text-sm text-white font-bold">2. Add User</p>
-                      <p className="text-xs text-slate-400">Click on **Authentication** (sidebar) {"->"} **Users** {"->"} **Add User** {"->"} **Create New User**.</p>
-                    </div>
-                    <div className="space-y-3">
-                      <p className="text-sm text-white font-bold">3. Enter Credentials</p>
-                      <p className="text-xs text-slate-400">Enter your chosen **Email** and **Password**. Uncheck "Auto-confirm user" if you want to verify via email, or leave it checked for instant access.</p>
-                    </div>
-                  </div>
-                  
-                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
-                    <p className="text-[10px] text-emerald-400 font-black uppercase mb-1">Benefit</p>
-                    <p className="text-xs text-slate-300">You can now change your password or add multiple staff members as admins through the Supabase UI without touching the code!</p>
-                  </div>
-                </div>
-              )}
+              <div className="p-4 bg-black rounded-2xl border border-white/5">
+                <p className="text-[10px] text-slate-500 font-black uppercase mb-2">How Activity works</p>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Version 1.9 monitors <span className="text-white font-bold">Keypresses</span> and <span className="text-white font-bold">Mouse Coordinates</span>. 
+                  It will stay "ONLINE" as long as either are detected.
+                </p>
+              </div>
             </div>
 
-            <div className="p-6 bg-slate-950/40 border-t border-white/5">
-              <button 
-                onClick={() => setShowSetup(false)}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 py-4 rounded-2xl font-black text-white transition-all shadow-xl shadow-indigo-600/30"
-              >
-                Close Guide
-              </button>
-            </div>
+            <button 
+              onClick={() => setShowSetup(false)}
+              className="mt-8 w-full bg-indigo-600 hover:bg-indigo-500 py-4 rounded-2xl font-black text-white transition-all shadow-xl shadow-indigo-600/30"
+            >
+              Done, Ready to Monitor
+            </button>
           </div>
         </div>
       )}
@@ -175,8 +167,6 @@ git push -u origin main`}
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fadeIn { animation: fadeIn 0.3s ease forwards; }
       `}</style>
     </div>
   );

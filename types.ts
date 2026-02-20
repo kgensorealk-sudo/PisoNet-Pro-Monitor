@@ -18,6 +18,7 @@ export interface PCInfo {
   status: PCStatus;
   lastHeartbeat: number; // timestamp
   ipAddress: string;
+  dailyUptime: number; // Total seconds for the day
   screenshotUrl?: string; // URL or base64 of the current screen
   metrics: {
     cpu: number;

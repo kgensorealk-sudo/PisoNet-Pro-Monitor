@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { PCInfo, PCStatus } from '../types';
 
 interface PCStatusCardProps {
@@ -7,20 +7,15 @@ interface PCStatusCardProps {
   onRemote?: (id: number, action: 'reboot' | 'shutdown' | 'maintenance') => void;
   onViewScreen?: (pc: PCInfo) => void;
   onRefreshScreen?: (id: number) => void;
-  onRename?: (id: number, newName: string) => void;
+  onDelete?: (id: number) => void;
+  onUpdateName?: (id: number, newName: string) => void;
 }
 
-const PCStatusCard: React.FC<PCStatusCardProps> = ({ pc, isAdmin, onRemote, onViewScreen, onRefreshScreen, onRename }) => {
+const PCStatusCard: React.FC<PCStatusCardProps> = ({ pc, isAdmin, onRemote, onViewScreen, onRefreshScreen, onDelete, onUpdateName }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [tempName, setTempName] = useState(pc.name);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (isEditingName && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isEditingName]);
+  const [pendingAction, setPendingAction] = useState<'reboot' | 'shutdown' | 'maintenance' | null>(null);
 
   const getStatusConfig = (status: PCStatus) => {
     switch (status) {
@@ -40,18 +35,22 @@ const PCStatusCard: React.FC<PCStatusCardProps> = ({ pc, isAdmin, onRemote, onVi
     setTimeout(() => setIsRefreshing(false), 3000);
   };
 
-  const handleRenameSubmit = () => {
-    if (tempName.trim() !== pc.name) {
-      onRename?.(pc.id, tempName.trim());
+  const handleSaveName = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (tempName.trim() && tempName !== pc.name) {
+      onUpdateName?.(pc.id, tempName);
     }
-    setIsEditingName(false);
+    setIsEditing(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') handleRenameSubmit();
-    if (e.key === 'Escape') {
-      setTempName(pc.name);
-      setIsEditingName(false);
+  const handleRemoteAction = async (action: 'reboot' | 'shutdown' | 'maintenance') => {
+    if (pendingAction) return;
+    setPendingAction(action);
+    try {
+      await onRemote?.(pc.id, action);
+    } finally {
+      // Keep loading state for a bit to show feedback
+      setTimeout(() => setPendingAction(null), 1500);
     }
   };
 
@@ -71,7 +70,7 @@ const PCStatusCard: React.FC<PCStatusCardProps> = ({ pc, isAdmin, onRemote, onVi
       
       <div 
         className="relative aspect-video bg-slate-950 overflow-hidden cursor-pointer group/screen"
-        onClick={() => !isDead && onViewScreen?.(pc)}
+        onClick={() => onViewScreen?.(pc)}
       >
         {pc.screenshotUrl ? (
           <img 
@@ -124,49 +123,56 @@ const PCStatusCard: React.FC<PCStatusCardProps> = ({ pc, isAdmin, onRemote, onVi
 
       <div className="p-5">
         <div className="flex justify-between items-start mb-4">
-          <div className="space-y-0.5 w-full">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                {isAdmin && isEditingName ? (
-                  <input
-                    ref={inputRef}
-                    type="text"
+          <div className="space-y-0.5 flex-1">
+            <div className="flex items-center gap-2">
+              {isEditing ? (
+                <form onSubmit={handleSaveName} className="flex-1">
+                  <input 
+                    autoFocus
                     value={tempName}
                     onChange={(e) => setTempName(e.target.value)}
-                    onBlur={handleRenameSubmit}
-                    onKeyDown={handleKeyDown}
-                    className="w-full bg-slate-950 border border-indigo-500/50 rounded-lg px-2 py-0.5 text-sm font-black text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                    onBlur={handleSaveName}
+                    className="bg-slate-950 border border-indigo-500/50 rounded px-2 py-0.5 text-sm font-black text-white w-full outline-none"
                   />
-                ) : (
-                  <div className="flex items-center gap-2 group/name">
-                    <h3 className="text-sm font-black text-white tracking-tight truncate">{pc.name}</h3>
-                    {isAdmin && (
-                      <button 
-                        onClick={() => setIsEditingName(true)}
-                        className="opacity-0 group-hover/name:opacity-100 text-slate-500 hover:text-indigo-400 transition-all"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className={`flex-shrink-0 px-2 py-0.5 rounded-md text-[8px] font-black text-white uppercase tracking-tighter ${config.color}`}>
+                </form>
+              ) : (
+                <h3 
+                  className="text-sm font-black text-white tracking-tight cursor-pointer hover:text-indigo-400 transition-colors flex items-center gap-2"
+                  onClick={() => isAdmin && setIsEditing(true)}
+                >
+                  {pc.name}
+                  {isAdmin && <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="opacity-0 group-hover:opacity-40"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>}
+                </h3>
+              )}
+              <div className={`px-2 py-0.5 rounded-md text-[8px] font-black text-white uppercase tracking-tighter ${config.color}`}>
                 {config.label}
               </div>
             </div>
-            <p className="text-[9px] text-slate-500 font-mono tracking-widest">{pc.ipAddress}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[9px] text-slate-500 font-mono tracking-widest">{pc.ipAddress}</p>
+              <span className="text-[9px] text-slate-700 font-black uppercase tracking-widest bg-white/5 px-1.5 rounded">ID: {pc.id}</span>
+            </div>
           </div>
+          
+          {isAdmin && (
+            <button 
+              onClick={() => onDelete?.(pc.id)}
+              className="p-1.5 text-slate-700 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+              title="Remove Terminal"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-3 gap-2 mb-4">
           <div className="bg-slate-950/50 p-1.5 rounded-lg border border-white/5 text-center">
-            <p className="text-[7px] text-slate-500 uppercase font-bold">CPU</p>
-            <p className="text-[10px] font-bold text-slate-300">{pc.metrics.cpu.toFixed(0)}%</p>
+            <p className="text-7px] text-slate-500 uppercase font-bold">CPU</p>
+            <p className="text-[10px] font-bold text-slate-300">{(pc.metrics?.cpu ?? 0).toFixed(0)}%</p>
           </div>
           <div className="bg-slate-950/50 p-1.5 rounded-lg border border-white/5 text-center">
-            <p className="text-[7px] text-slate-500 uppercase font-bold">RAM</p>
-            <p className="text-[10px] font-bold text-slate-300">{pc.metrics.ram.toFixed(0)}%</p>
+            <p className="text-7px] text-slate-500 uppercase font-bold">RAM</p>
+            <p className="text-[10px] font-bold text-slate-300">{(pc.metrics?.ram ?? 0).toFixed(0)}%</p>
           </div>
           <div className="bg-slate-950/50 p-1.5 rounded-lg border border-white/5 text-center">
             <p className="text-[7px] text-slate-500 uppercase font-bold">Ping</p>
@@ -176,17 +182,59 @@ const PCStatusCard: React.FC<PCStatusCardProps> = ({ pc, isAdmin, onRemote, onVi
 
         <div className="flex justify-between items-center pt-2 border-t border-white/5">
           <div>
-            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Active Time (Uptime)</p>
-            <span className={`text-sm font-black font-mono tracking-tighter text-indigo-400`}>
-              {formatTime(pc.metrics.uptime || 0)}
-            </span>
+            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">Session / Daily Total</p>
+            <div className="flex flex-col">
+              <span className={`text-sm font-black font-mono tracking-tighter text-indigo-400`}>
+                {formatTime(pc.metrics.uptime || 0)}
+              </span>
+              <span className="text-[10px] font-black font-mono tracking-tighter text-emerald-500">
+                {formatTime(pc.dailyUptime + (pc.metrics.uptime || 0))}
+              </span>
+            </div>
           </div>
           
           {isAdmin && (
             <div className="flex gap-1.5">
               <button 
+                onClick={() => handleRemoteAction('reboot')}
+                disabled={!!pendingAction || isDead}
+                className={`p-2 rounded-lg border transition-all ${pendingAction === 'reboot' ? 'bg-amber-500/20 border-amber-500/50 text-amber-500' : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:text-white'} ${isDead ? 'opacity-30' : ''}`}
+                title="Reboot"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={pendingAction === 'reboot' ? 'animate-spin' : ''}>
+                  <path d="M21 2v6h-6"></path>
+                  <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+                </svg>
+              </button>
+
+              <button 
+                onClick={() => handleRemoteAction('shutdown')}
+                disabled={!!pendingAction || isDead}
+                className={`p-2 rounded-lg border transition-all ${pendingAction === 'shutdown' ? 'bg-rose-500/20 border-rose-500/50 text-rose-500' : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:text-white'} ${isDead ? 'opacity-30' : ''}`}
+                title="Shutdown"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={pendingAction === 'shutdown' ? 'animate-pulse' : ''}>
+                  <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                  <line x1="12" y1="2" x2="12" y2="12"></line>
+                </svg>
+              </button>
+
+              <button 
+                onClick={() => handleRemoteAction('maintenance')}
+                disabled={!!pendingAction}
+                className={`p-2 rounded-lg border transition-all ${pendingAction === 'maintenance' ? 'bg-slate-500/20 border-slate-500/50 text-slate-300' : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:text-white'}`}
+                title="Maintenance Mode"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className={pendingAction === 'maintenance' ? 'animate-bounce' : ''}>
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                </svg>
+              </button>
+
+              <div className="w-px h-8 bg-white/5 mx-1"></div>
+
+              <button 
                 onClick={handleRefresh}
-                disabled={isRefreshing || isDead}
+                disabled={isRefreshing || isDead || !!pendingAction}
                 className={`group/btn flex items-center gap-2 bg-indigo-600/10 hover:bg-indigo-600 border border-indigo-500/20 text-indigo-400 hover:text-white text-[8px] font-black uppercase px-3 py-2 rounded-lg transition-all ${isRefreshing ? 'opacity-50' : ''}`}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className={`${isRefreshing ? 'animate-spin' : 'group-hover/btn:scale-110'}`}>
